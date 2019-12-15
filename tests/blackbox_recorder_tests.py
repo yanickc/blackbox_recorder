@@ -1,10 +1,10 @@
 import pytest
 
-from params_record import get_params_storage, del_params_storage
+from blackbox_recorder import get_recorder, del_recorder
 
 
 def test_store_args():
-    storage = get_params_storage("test")
+    storage = get_recorder("test")
 
     class A:
         def f(self, a, *args, param1=11, param2=22, **kwargs):
@@ -21,11 +21,11 @@ def test_store_args():
     assert storage[obj]["varargs"][0] == 2
     assert storage[obj]["varargs"][1] == 3
 
-    del_params_storage("test")
+    del_recorder("test")
 
 
 def test_store_locals():
-    storage = get_params_storage("test")
+    storage = get_recorder("test")
 
     def my_func():
         my_local = 41
@@ -38,11 +38,11 @@ def test_store_locals():
 
     assert storage["my_func"]["my_local"] == 42
 
-    del_params_storage("test")
+    del_recorder("test")
 
 
 def test_store_locals_with_error():
-    storage = get_params_storage("test")
+    storage = get_recorder("test")
 
     def my_func():
         my_local = 41
@@ -54,11 +54,11 @@ def test_store_locals_with_error():
     with pytest.raises(KeyError):
         my_func()
 
-    del_params_storage("test")
+    del_recorder("test")
 
 
 def test_store_properties():
-    storage = get_params_storage("test")
+    storage = get_recorder("test")
 
     class A:
         def __init__(self) -> None:
@@ -78,11 +78,11 @@ def test_store_properties():
 
     assert storage["my_key"]["c"] == 3
 
-    del_params_storage("test")
+    del_recorder("test")
 
 
 def test_store_settings():
-    storage = get_params_storage("test")
+    storage = get_recorder("test")
 
     storage.store_settings("my_key", {"a": 1, "b": 2, "c": 3})
     storage.print_to_log()
@@ -91,4 +91,4 @@ def test_store_settings():
     assert storage["my_key"]["b"] == 2
     assert storage["my_key"]["c"] == 3
 
-    del_params_storage("test")
+    del_recorder("test")

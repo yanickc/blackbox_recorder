@@ -7,23 +7,23 @@ object properties and arbitrary key value pairs.
 
 Keeps copies of values.
 
-Use functions get_params_storage() and del_params_storage() to access
-a ParamsStorage instance globally without the need to share
-the instance, in the same way is logging.getLogger().
+Use functions get_recorder() and del_recorder() to access
+a Recorder instance globally without the need to share
+the instance, in the same way as logging.getLogger().
 """
 
 import inspect
 import logging
 from collections import defaultdict
 from copy import deepcopy
-from pprint import PrettyPrinter, pformat
+from pprint import pformat
 from typing import Dict, Iterable, Union
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 
-class ParamsStorage(defaultdict):
+class Recorder(defaultdict):
     def __init__(self) -> None:
         super().__init__(dict)
 
@@ -65,7 +65,9 @@ class ParamsStorage(defaultdict):
         if arg_values.varargs is not None:
             v.update(deepcopy(arg_values.locals[keywords]))
 
-    def store_locals(self, key: Union[str, object], variable_names: Iterable[str]) -> None:
+    def store_locals(
+        self, key: Union[str, object], variable_names: Iterable[str]
+    ) -> None:
         """
         Store the local variables names and values of the calling function.
 
@@ -97,7 +99,9 @@ class ParamsStorage(defaultdict):
             else:
                 raise KeyError(f"Variable '{n}' not found in locals variables.")
 
-    def store_properties(self, key: Union[str, object], obj, property_names: Iterable[str]) -> None:
+    def store_properties(
+        self, key: Union[str, object], obj, property_names: Iterable[str]
+    ) -> None:
         """
         Store the given properties names and values from the given object. Ex:
 
@@ -188,13 +192,8 @@ class ParamsStorage(defaultdict):
 
         logger.info(self.format())
 
-
-storage = defaultdict(ParamsStorage)
-
-
-def get_params_storage(name: str) -> ParamsStorage:
-    return storage[name]
-
-
-def del_params_storage(name: str) -> None:
-    del storage[name]
+    def clear(self):
+        """
+        Remove all items.
+        """
+        super().clear()

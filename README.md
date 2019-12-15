@@ -9,16 +9,16 @@ object properties and arbitrary key value pairs.
 Keeps copies of values.
 
 Use functions get_params_storage() and del_params_storage() to access
-a ParamsStorage instance globally without the need to share
+a Recorder instance globally without the need to share
 the instance, in the same way is logging.getLogger().
 
 
 # Examples
 
 ```python
-from params_record import get_params_storage
+from blackbox_recorder import get_recorder
 
-storage = get_params_storage("test")
+storage = get_recorder("test")
 
 class A:
     def f(self, a, *args, param1=11, param2=22, **kwargs):
@@ -26,8 +26,10 @@ class A:
 
 obj = A()
 obj.f(1, 2, 3, param1=42, extra_param=123)
-storage.print_to_log()
-```        
+storage.print_to_log()                             
+storage.clear()  
+```
+        
 ```
 # Output:
 
@@ -42,6 +44,4 @@ Instance of class 'A' (<class 'params_logging.test_store_args.<locals>.A'>) (id:
         3
     ]
 }
-
-
 ```
