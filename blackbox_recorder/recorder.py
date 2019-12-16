@@ -60,17 +60,17 @@ class Recorder(defaultdict):
 
         for a in arg_values.args:
             if a != "self":
-                v[a] = deepcopy(arg_values.locals[a])
+                v[a] = self._grab(arg_values.locals[a])
 
         varargs = arg_values.varargs
         if arg_values.varargs is not None:
             varargs = arg_values.locals[varargs]
             if len(varargs) > 0:
-                v["varargs"] = deepcopy(varargs)
+                v["varargs"] = self._grab(varargs)
 
         keywords = arg_values.keywords
         if arg_values.varargs is not None:
-            v.update(deepcopy(arg_values.locals[keywords]))
+            v.update(self._grab(arg_values.locals[keywords]))
 
     def store_locals(self, key: Union[str, object], variable_names: Iterable[str]) -> None:
         """
@@ -106,7 +106,7 @@ class Recorder(defaultdict):
 
         for n in variable_names:
             if n in arg_values.locals:
-                v[n] = deepcopy(arg_values.locals[n])
+                v[n] = self._grab(arg_values.locals[n])
             else:
                 raise KeyError(f"Variable '{n}' not found in locals variables.")
 
@@ -146,7 +146,7 @@ class Recorder(defaultdict):
 
         for p in property_names:
             if p in obj.__dict__:
-                v[p] = deepcopy(obj.__dict__[p])
+                v[p] = self._grab(obj.__dict__[p])
             else:
                 raise KeyError(f"Property '{p}' not found in object '{obj}'.")
 
@@ -171,12 +171,13 @@ class Recorder(defaultdict):
 
         """
 
-        self[key].update(deepcopy(arg))
+        self[key].update(self._grab(arg))
 
-    def format(self, compact=True) -> str:
+    def format(self, header="", compact=True) -> str:
         """
         Return formatted string with the current stored values.
 
+        :param header:  Header message.
         :type compact:  If compact is false each item of a long sequence will be formatted on a separate line.
                         If compact is true, as many items as will fit within the width will be formatted
                         on each output line.
@@ -188,17 +189,22 @@ class Recorder(defaultdict):
         {'a': 1, 'extra_param': 123, 'param1': 42, 'param2': 22, 'varargs': (2, 3)}
 
         """
-        lines = ["\n"]
+        lines = [
+            "",
+            f"{header:=^140}",
+        ]
 
         for k, v in super().items():
-            obj_description = f"{' ' + k + ' ':=^100}\n"
-            lines.append(obj_description)
-            lines.append(pformat(v, width=120, compact=compact))
             lines.append("")
+            lines.append(f"{' ' + k + ' ':-^140}")
+            lines.append(pformat(v, width=120, compact=compact))
+
+        lines.append("")
+        lines.append("=" * 140)
 
         return "\n".join(lines)
 
-    def print_to_log(self, compact=True) -> None:
+    def print_to_log(self, header="", compact=True) -> None:
         """
         Print the current stored values to log.
 
@@ -214,7 +220,7 @@ class Recorder(defaultdict):
 
         """
 
-        logger.info(self.format(compact))
+        logger.info(self.format(header=header, compact=compact))
 
     def clear(self):
         """
@@ -222,7 +228,8 @@ class Recorder(defaultdict):
         """
         super().clear()
 
-    def _make_key(self, key: Union[str, object]) -> str:
+    @staticmethod
+    def _make_key(key: Union[str, object]) -> str:
         """
         Create a string key from objects class name and id.
 
@@ -230,6 +237,26 @@ class Recorder(defaultdict):
         :return: String representation for the key.
         """
         if not isinstance(key, str):
-            return f"{key.__class__.__name__} ({key.__class__}) (id:{id(key):X})"
+            return f"{key.__class__.__name__} {key.__class__} object at 0x{id(key):x}"
         else:
             return key
+
+    @staticmethod
+    def _grab(value):
+        if isinstance(value, (dict, list, tuple)):
+            return deepcopy(value)
+        elif isinstance(value, (bool, int, float, complex, str)):
+            return value
+        else:
+            return value.__repr__()
+
+
+recorders = defaultdict(Recorder)
+
+
+def get_recorder(name: str) -> Recorder:
+    return recorders[name]
+
+
+def del_recorder(name: str) -> None:
+    del recorders[name]

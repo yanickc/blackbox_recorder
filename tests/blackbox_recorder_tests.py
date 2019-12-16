@@ -1,6 +1,6 @@
 import pytest
 
-from blackbox_recorder import get_recorder, del_recorder
+from blackbox_recorder.recorder import get_recorder, del_recorder
 
 
 def test_store_args():
