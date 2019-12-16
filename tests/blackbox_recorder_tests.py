@@ -14,12 +14,14 @@ def test_store_args():
     obj.f(1, 2, 3, param1=42, extra_param=123)
     storage.print_to_log()
 
-    assert storage[obj]["a"] == 1
-    assert storage[obj]["extra_param"] == 123
-    assert storage[obj]["param1"] == 42
-    assert storage[obj]["param2"] == 22
-    assert storage[obj]["varargs"][0] == 2
-    assert storage[obj]["varargs"][1] == 3
+    key = storage._make_key(obj)
+
+    assert storage[key]["a"] == 1
+    assert storage[key]["extra_param"] == 123
+    assert storage[key]["param1"] == 42
+    assert storage[key]["param2"] == 22
+    assert storage[key]["varargs"][0] == 2
+    assert storage[key]["varargs"][1] == 3
 
     del_recorder("test")
 
@@ -84,7 +86,7 @@ def test_store_properties():
 def test_store_settings():
     storage = get_recorder("test")
 
-    storage.store_settings("my_key", {"a": 1, "b": 2, "c": 3})
+    storage.store_values("my_key", {"a": 1, "b": 2, "c": 3})
     storage.print_to_log()
 
     assert storage["my_key"]["a"] == 1

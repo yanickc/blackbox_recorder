@@ -31,6 +31,10 @@ class Recorder(defaultdict):
         """
         Store arguments names and values of the calling function.
 
+        :param key: Key under which to store the values. In case of an object, its class name and id will be used.
+        :return: None
+
+
         ```
         class A:
             def f(self, a, *args, param1=11, param2=22, **kwargs):
@@ -43,10 +47,13 @@ class Recorder(defaultdict):
 
         # Output:
 
-        ====== Instance 'A' (<class 'params_record_tests.test_store_args.<locals>.A'>) (id:10B81F310) ======
+        ========= A (<class 'blackbox_recorder_tests.test_store_args.<locals>.A'>) (id:112CEA390) ==========
 
         {'a': 1, 'extra_param': 123, 'param1': 42, 'param2': 22, 'varargs': (2, 3)}
+
         """
+        key = self._make_key(key)
+
         v = self[key]
         frame = inspect.currentframe().f_back
         arg_values = inspect.getargvalues(frame)
@@ -65,11 +72,13 @@ class Recorder(defaultdict):
         if arg_values.varargs is not None:
             v.update(deepcopy(arg_values.locals[keywords]))
 
-    def store_locals(
-        self, key: Union[str, object], variable_names: Iterable[str]
-    ) -> None:
+    def store_locals(self, key: Union[str, object], variable_names: Iterable[str]) -> None:
         """
         Store the local variables names and values of the calling function.
+
+        :param key: Key under which to store the values. In case of an object, its class name and id will be used.
+        :param variable_names: Names of local variables to store the values of.
+        :return: None
 
         ```
         def my_func():
@@ -84,11 +93,13 @@ class Recorder(defaultdict):
 
         # Output:
 
-        ============================================ 'my_func' =============================================
+        ============================================= my_func ==============================================
 
         {'my_local': 42}
 
         """
+        key = self._make_key(key)
+
         v = self[key]
         frame = inspect.currentframe().f_back
         arg_values = inspect.getargvalues(frame)
@@ -99,11 +110,14 @@ class Recorder(defaultdict):
             else:
                 raise KeyError(f"Variable '{n}' not found in locals variables.")
 
-    def store_properties(
-        self, key: Union[str, object], obj, property_names: Iterable[str]
-    ) -> None:
+    def store_properties(self, key: Union[str, object], obj, property_names: Iterable[str]) -> None:
         """
         Store the given properties names and values from the given object. Ex:
+
+        :param key: Key under which to store the values. In case of an object, its class name and id will be used.
+        :param obj: Object from which to store values.
+        :param property_names: Names of object properties to store the values of.
+        :return: None
 
         ```
         class A:
@@ -121,10 +135,13 @@ class Recorder(defaultdict):
 
         # Output:
 
-        ============================================= 'my_key' =============================================
+        ============================================== my_key ==============================================
 
         {'a': 1, 'c': 3}
+
         """
+        key = self._make_key(key)
+
         v = self[key]
 
         for p in property_names:
@@ -133,27 +150,36 @@ class Recorder(defaultdict):
             else:
                 raise KeyError(f"Property '{p}' not found in object '{obj}'.")
 
-    def store_settings(self, key: Union[str, object], arg: Dict) -> None:
+    def store_values(self, key: Union[str, object], arg: Dict) -> None:
         """
         Store arbitrary key balues paris under the given key.
 
+        :param key: Key under which to store the values. In case of an object, its class name and id will be used.
+        :param arg: Dict with names and values to store.
+        :return: None
+
         ```
-        storage.store_settings("my_key", {"a": 1, "b": 2, "c": 3})
+        storage.store_values("my_key", {"a": 1, "b": 2, "c": 3})
         storage.print_to_log()
         ```
 
         # Output:
 
-        ============================================= 'my_key' =============================================
+        ============================================== my_key ==============================================
 
         {'a': 1, 'b': 2, 'c': 3}
+
         """
 
         self[key].update(deepcopy(arg))
 
-    def format(self) -> str:
+    def format(self, compact=True) -> str:
         """
         Return formatted string with the current stored values.
+
+        :type compact:  If compact is false each item of a long sequence will be formatted on a separate line.
+                        If compact is true, as many items as will fit within the width will be formatted
+                        on each output line.
 
         Ex.:
 
@@ -162,25 +188,23 @@ class Recorder(defaultdict):
         {'a': 1, 'extra_param': 123, 'param1': 42, 'param2': 22, 'varargs': (2, 3)}
 
         """
-
         lines = ["\n"]
 
         for k, v in super().items():
-            if isinstance(k, str):
-                title = f" '{k}' "
-            else:
-                title = f" Instance '{k.__class__.__name__}' ({k.__class__}) (id:{id(k):X}) "
-
-            obj_description = f"{title:=^100}\n"
+            obj_description = f"{' ' + k + ' ':=^100}\n"
             lines.append(obj_description)
-            lines.append(pformat(v, width=120, compact=True))
+            lines.append(pformat(v, width=120, compact=compact))
             lines.append("")
 
         return "\n".join(lines)
 
-    def print_to_log(self) -> None:
+    def print_to_log(self, compact=True) -> None:
         """
         Print the current stored values to log.
+
+        :type compact:  If compact is false each item of a long sequence will be formatted on a separate line.
+                        If compact is true, as many items as will fit within the width will be formatted
+                        on each output line.
 
         Ex.:
 
@@ -190,10 +214,22 @@ class Recorder(defaultdict):
 
         """
 
-        logger.info(self.format())
+        logger.info(self.format(compact))
 
     def clear(self):
         """
         Remove all items.
         """
         super().clear()
+
+    def _make_key(self, key: Union[str, object]) -> str:
+        """
+        Create a string key from objects class name and id.
+
+        :param key: Key
+        :return: String representation for the key.
+        """
+        if not isinstance(key, str):
+            return f"{key.__class__.__name__} ({key.__class__}) (id:{id(key):X})"
+        else:
+            return key
