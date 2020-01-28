@@ -1,4 +1,7 @@
+import logging
 import pytest
+
+logging.basicConfig(level=logging.DEBUG)
 
 from blackbox_recorder.recorder import get_recorder, del_recorder
 
@@ -59,7 +62,7 @@ def test_store_locals_with_error():
     del_recorder("test")
 
 
-def test_store_properties():
+def test_store_properties_with_property_list():
     storage = get_recorder("test")
 
     class A:
@@ -77,8 +80,31 @@ def test_store_properties():
 
     assert storage["my_key"]["a"] == 1
     assert "b" not in storage["my_key"]
-
     assert storage["my_key"]["c"] == 3
+
+    del_recorder("test")
+
+
+def test_store_properties_without_property_list():
+    storage = get_recorder("test")
+
+    class A:
+        def __init__(self) -> None:
+            super().__init__()
+
+            self.a = 1
+            self.b = 2
+            self.c = 3
+
+    a = A()
+
+    storage.store_properties("my_key", a)
+    storage.print_to_log()
+
+    assert storage["my_key"]["a"] == 1
+    assert storage["my_key"]["b"] == 2
+    assert storage["my_key"]["c"] == 3
+    assert len(storage["my_key"]) == 3
 
     del_recorder("test")
 

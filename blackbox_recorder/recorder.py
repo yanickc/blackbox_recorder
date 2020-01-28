@@ -17,9 +17,8 @@ import logging
 from collections import defaultdict
 from copy import deepcopy
 from pprint import pformat
-from typing import Dict, Iterable, Union
+from typing import Dict, Iterable, Union, Set, Optional
 
-logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 
@@ -27,11 +26,12 @@ class Recorder(defaultdict):
     def __init__(self) -> None:
         super().__init__(dict)
 
-    def store_args(self, key: Union[str, object]) -> None:
+    def store_args(self, key: Union[str, object], suppress: Optional[Set[str]] = None) -> None:
         """
         Store arguments names and values of the calling function.
 
         :param key: Key under which to store the values. In case of an object, its class name and id will be used.
+        :param suppress: set of strings to suppress
         :return: None
 
 
@@ -52,6 +52,9 @@ class Recorder(defaultdict):
         {'a': 1, 'extra_param': 123, 'param1': 42, 'param2': 22, 'varargs': (2, 3)}
 
         """
+        if suppress is None:
+            suppress = set()
+
         key = self._make_key(key)
 
         v = self[key]
@@ -59,7 +62,7 @@ class Recorder(defaultdict):
         arg_values = inspect.getargvalues(frame)
 
         for a in arg_values.args:
-            if a != "self":
+            if a != "self" and a not in suppress:
                 v[a] = self._grab(arg_values.locals[a])
 
         varargs = arg_values.varargs
@@ -110,7 +113,7 @@ class Recorder(defaultdict):
             else:
                 raise KeyError(f"Variable '{n}' not found in locals variables.")
 
-    def store_properties(self, key: Union[str, object], obj, property_names: Iterable[str]) -> None:
+    def store_properties(self, key: Union[str, object], obj, property_names: Optional[Iterable[str]] = None,) -> None:
         """
         Store the given properties names and values from the given object. Ex:
 
@@ -144,11 +147,15 @@ class Recorder(defaultdict):
 
         v = self[key]
 
-        for p in property_names:
-            if p in obj.__dict__:
-                v[p] = self._grab(obj.__dict__[p])
-            else:
-                raise KeyError(f"Property '{p}' not found in object '{obj}'.")
+        if property_names is not None:
+            for p in property_names:
+                if p in obj.__dict__:
+                    v[p] = self._grab(obj.__dict__[p])
+                else:
+                    raise KeyError(f"Property '{p}' not found in object '{obj}'.")
+        else:
+            for key, value in obj.__dict__.items():
+                v[key] = self._grab(value)
 
     def store_values(self, key: Union[str, object], arg: Dict) -> None:
         """
@@ -204,7 +211,7 @@ class Recorder(defaultdict):
 
         return "\n".join(lines)
 
-    def print_to_log(self, header="", compact=True) -> None:
+    def print_to_log(self, output_logger=None, header="", compact=True) -> None:
         """
         Print the current stored values to log.
 
@@ -220,7 +227,8 @@ class Recorder(defaultdict):
 
         """
 
-        logger.info(self.format(header=header, compact=compact))
+        log = output_logger if output_logger is not None else logger
+        log.info(self.format(header=header, compact=compact))
 
     def clear(self):
         """

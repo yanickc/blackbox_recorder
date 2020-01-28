@@ -10,13 +10,13 @@ Keeps copies of values.
 
 Use functions get_params_storage() and del_params_storage() to access
 a Recorder instance globally without the need to share
-the instance, in the same way is logging.getLogger().
+the instance, in the same way as logging.getLogger().
 
 
 # Examples
 
 ```python
-from blackbox_recorder import get_recorder
+from blackbox_recorder.recorder import get_recorder
 
 storage = get_recorder("test")
 
